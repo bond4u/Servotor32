@@ -8,8 +8,7 @@
 #include "Servotor32_TimerOne.h"
 
 Servotor32::Servotor32()
-{  
-
+{
 }
 
 //stores information about the servos and groups
@@ -23,10 +22,10 @@ signed short servo_timings[MAX_TIMINGS]; // the timing where the change occurs
 uint8_t  shift_output[MAX_TIMINGS];  // the output of the shift register
 uint8_t  shift_latch[MAX_TIMINGS];   // the shift register latch used
 
-// keeps track of whether its safe or not to update the servos
+// keeps track of whether its safe or not to update the registers
 uint8_t update_reg_flag = 0;
 
-// variables for the callback
+// timer ticker, +1 each call
 uint16_t timer;
 uint8_t  counter = 0;
 uint8_t  pwm_active = 1;
@@ -37,7 +36,12 @@ uint8_t pin_2_num[8] = {0x08,0x04,0x02,0x01, 0x80,0x40,0x20,0x10};
 
 void Servotor32::begin(){
   //setup pin modes
+  // F4..F7 are used as latch clocks
   DDRF |= 0xF0;  // sets pins F7 to F4 as outputs
+  // B0&B7 are used bu ultrasound
+  // B1 is shift clock
+  // B2 is data to shift registers
+  // B3,B4,B5,B6 are not used?
   DDRB = 0xFF;  // sets pins B0 to B7 as outputs
   
   //setup PC serial port
@@ -77,6 +81,7 @@ void Servotor32::begin(){
   TIMSK4 &= ~(_BV(TOIE4)); // for good measure 
 }
 
+// microsec counter, +10 each call
 long unsigned int us_counter = 0;
 long unsigned int startTime = 0; 
 long unsigned int currentTime = 0; 
@@ -113,7 +118,8 @@ void Servotor32::callback(){
   if(timer < 1100){ // keep it from updating servos mid-array change by some weird coincidence
     if(timer == servo_timings[counter]){ // if the time has arrived to update a shift reg
       SPDR = shift_output[counter]; // push the byte to be loaded to the SPI register
-      while(!(SPSR & (1<<SPIF))); //wait till the register completes
+      while (!(SPSR & (1<<SPIF))) { //wait till the register completes
+      }
       PORTF &= ~(shift_latch[counter]); // clock the shift register latch pin low, setting the register
       PORTF |= shift_latch[counter];  // clock the shift register latch pin high, ready to be set low next time
       counter++;

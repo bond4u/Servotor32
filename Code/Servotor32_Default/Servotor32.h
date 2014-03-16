@@ -22,19 +22,19 @@ class Servotor32 {
 public:
   Servotor32();
   void begin();
-  
+
   long unsigned int micros_new();
 
   long unsigned int millis_new();
   void delay_ms(long unsigned int);
   void delay_us(long unsigned int);
-  
+
   void changeServo(byte, short);
-  
+
   void printStatus(Stream*);
-  
+
   void process(Stream*);
-  
+
   float ping();
   float multiPing(unsigned short);
 

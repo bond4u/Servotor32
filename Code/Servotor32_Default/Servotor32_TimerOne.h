@@ -23,7 +23,6 @@
 class Servotor32_TimerOne
 {
   public:
-  
     // properties
     unsigned int pwmPeriod;
     unsigned char clockSelectBits;

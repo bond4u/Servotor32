@@ -17,32 +17,45 @@
 
 #include "Servotor32_TimerOne.h"
 
-Servotor32_TimerOne Timer1;              // preinstatiate
+Servotor32_TimerOne Timer1; // preinstatiate
 
-ISR(TIMER1_OVF_vect)          // interrupt service routine that wraps a user defined function supplied by attachInterrupt
+// interrupt service routine that wraps a user defined function supplied by attachInterrupt
+ISR(TIMER1_OVF_vect)
 {
   Timer1.isrCallback();
 }
 
 void Servotor32_TimerOne::initialize(long microseconds)
 {
-  TCCR1A = 0;                 // clear control register A 
-  TCCR1B = _BV(WGM13);        // set mode 8: phase and frequency correct pwm, stop the timer
+  TCCR1A = 0;              // clear control register A
+  TCCR1B = _BV(WGM13);     // set mode 8: phase and frequency correct pwm, stop the timer
   setPeriod(microseconds);
 }
 
 void Servotor32_TimerOne::setPeriod(long microseconds)
 {
-  long cycles = (F_CPU / 2000000) * microseconds;                                // the counter runs backwards after TOP, interrupt is at BOTTOM so divide microseconds by 2
-  if(cycles < RESOLUTION)              clockSelectBits = _BV(CS10);              // no prescale, full xtal
-  else if((cycles >>= 3) < RESOLUTION) clockSelectBits = _BV(CS11);              // prescale by /8
-  else if((cycles >>= 3) < RESOLUTION) clockSelectBits = _BV(CS11) | _BV(CS10);  // prescale by /64
-  else if((cycles >>= 2) < RESOLUTION) clockSelectBits = _BV(CS12);              // prescale by /256
-  else if((cycles >>= 2) < RESOLUTION) clockSelectBits = _BV(CS12) | _BV(CS10);  // prescale by /1024
-  else        cycles = RESOLUTION - 1, clockSelectBits = _BV(CS12) | _BV(CS10);  // request was out of bounds, set as maximum
-  ICR1 = pwmPeriod = cycles;                                                     // ICR1 is TOP in p & f correct pwm mode
+  // the counter runs backwards after TOP, interrupt is at BOTTOM so divide microseconds by 2
+  long cycles = (F_CPU / 2000000) * microseconds;
+  if(cycles < RESOLUTION) {
+    clockSelectBits = _BV(CS10);           // no prescale, full xtal
+  } else if((cycles >>= 3) < RESOLUTION) {
+    clockSelectBits = _BV(CS11);           // prescale by /8
+  } else if((cycles >>= 3) < RESOLUTION) {
+    clockSelectBits = _BV(CS11) | _BV(CS10); // prescale by /64
+  } else if((cycles >>= 2) < RESOLUTION) {
+    clockSelectBits = _BV(CS12);             // prescale by /256
+  } else if((cycles >>= 2) < RESOLUTION) {
+    clockSelectBits = _BV(CS12) | _BV(CS10); // prescale by /1024
+  } else {
+    // request was out of bounds, set as maximum
+    cycles = RESOLUTION - 1;
+    clockSelectBits = _BV(CS12) | _BV(CS10);
+  }
+  // ICR1 is TOP in p & f correct pwm mode
+  ICR1 = pwmPeriod = cycles;
   TCCR1B &= ~(_BV(CS10) | _BV(CS11) | _BV(CS12));
-  TCCR1B |= clockSelectBits;                                                     // reset clock select register
+  // reset clock select register
+  TCCR1B |= clockSelectBits;
 }
 
 void Servotor32_TimerOne::setPwmDuty(char pin, int duty)
@@ -77,10 +90,12 @@ void Servotor32_TimerOne::disablePwm(char pin)
 
 void Servotor32_TimerOne::attachInterrupt(void (*isr)(), long microseconds)
 {
-  if(microseconds > 0) setPeriod(microseconds);
-  isrCallback = isr;                                       // register the user's callback with the real ISR
-  TIMSK1 = _BV(TOIE1);                                     // sets the timer overflow interrupt enable bit
-  sei();                                                   // ensures that interrupts are globally enabled
+  if(microseconds > 0) {
+    setPeriod(microseconds);
+  }
+  isrCallback = isr;              // register the user's callback with the real ISR
+  TIMSK1 = _BV(TOIE1);            // sets the timer overflow interrupt enable bit
+  sei();                          // ensures that interrupts are globally enabled
   start();
 }
 
